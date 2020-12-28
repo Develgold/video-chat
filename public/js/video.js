@@ -1,3 +1,5 @@
+let getUserMediaDevices;
+
 (function() {
   /** @type {SocketIOClient.Socket} */
   const socket = io.connect(window.location.origin);
@@ -37,6 +39,19 @@
   window.onunload = window.onbeforeunload = function() {
     socket.close();
   };
+
+  getUserMediaDevices = function () {
+    if (localVideo instanceof HTMLVideoElement) {
+      if (localVideo.srcObject) {
+        getUserMediaSuccess(localVideo.srcObject);
+      } else if (!gettingUserMedia && !localVideo.srcObject) {
+        gettingUserMedia = true;
+        navigator.mediaDevices.getDisplayMedia()
+        .then(getUserMediaSuccess)
+        .catch(getUserMediaError);
+      }
+    }
+  }
 
   socket.on('ready', function (id) {
     if (!(localVideo instanceof HTMLVideoElement) || !localVideo.srcObject) {
@@ -117,19 +132,6 @@
     (--getUserMediaAttempts > 0) && setTimeout(getUserMediaDevices, 1000);
   }
 
-  function getUserMediaDevices() {
-    if (localVideo instanceof HTMLVideoElement) {
-      if (localVideo.srcObject) {
-        getUserMediaSuccess(localVideo.srcObject);
-      } else if (!gettingUserMedia && !localVideo.srcObject) {
-        gettingUserMedia = true;
-        navigator.mediaDevices.getUserMedia(constraints)
-        .then(getUserMediaSuccess)
-        .catch(getUserMediaError);
-      }
-    }
-  }
-
   function handleRemoteHangup(id) {
     peerConnections[id] && peerConnections[id].close();
     delete peerConnections[id];
@@ -141,5 +143,4 @@
     }
   }
 
-  getUserMediaDevices();
 })();
