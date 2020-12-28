@@ -3,7 +3,7 @@ let getUserMediaDevices;
 (function() {
   /** @type {SocketIOClient.Socket} */
   const socket = io.connect(window.location.origin);
-  const localVideo = document.querySelector('.localVideo');
+  let localVideo = null;
   const remoteVideos = document.querySelector('.remoteVideos');
   const peerConnections = {};
   
@@ -41,27 +41,21 @@ let getUserMediaDevices;
   };
 
   getUserMediaDevices = function () {
-    if (localVideo instanceof HTMLVideoElement) {
-      if (localVideo.srcObject) {
-        getUserMediaSuccess(localVideo.srcObject);
-      } else if (!gettingUserMedia && !localVideo.srcObject) {
+    if (!gettingUserMedia && !localVideo) {
         gettingUserMedia = true;
         navigator.mediaDevices.getDisplayMedia(constraints)
         .then(getUserMediaSuccess)
         .catch(getUserMediaError);
-      }
     }
   }
 
   socket.on('ready', function (id) {
-    if (!(localVideo instanceof HTMLVideoElement) || !localVideo.srcObject) {
+    if (!localVideo) {
       return;
     }
     const peerConnection = new RTCPeerConnection(config);
     peerConnections[id] = peerConnection;
-    if (localVideo instanceof HTMLVideoElement) {
-      peerConnection.addStream(localVideo.srcObject);
-    }
+    peerConnection.addStream(localVideo);
     peerConnection.createOffer()
     .then(sdp => peerConnection.setLocalDescription(sdp))
     .then(function () {
@@ -78,9 +72,7 @@ let getUserMediaDevices;
   socket.on('offer', function(id, description) {
     const peerConnection = new RTCPeerConnection(config);
     peerConnections[id] = peerConnection;
-    if (localVideo instanceof HTMLVideoElement) {
-      peerConnection.addStream(localVideo.srcObject);
-    }
+    peerConnection.addStream(localVideo);
     peerConnection.setRemoteDescription(description)
     .then(() => peerConnection.createAnswer())
     .then(sdp => peerConnection.setLocalDescription(sdp))
@@ -106,9 +98,7 @@ let getUserMediaDevices;
 
   function getUserMediaSuccess(stream) {
     gettingUserMedia = false;
-    if (localVideo instanceof HTMLVideoElement) {
-      !localVideo.srcObject && (localVideo.srcObject = stream);
-    }
+    localVideo = stream;
     socket.emit('ready');
   }
 
