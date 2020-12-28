@@ -20,8 +20,8 @@ let getUserMediaDevices;
 
   /** @type {MediaStreamConstraints} */
   const constraints = {
-    // audio: true,
-    video: { facingMode: "user" }
+    audio: true,
+    video: true
   };
 
   socket.on('full', function(room) {
@@ -46,7 +46,7 @@ let getUserMediaDevices;
         getUserMediaSuccess(localVideo.srcObject);
       } else if (!gettingUserMedia && !localVideo.srcObject) {
         gettingUserMedia = true;
-        navigator.mediaDevices.getDisplayMedia()
+        navigator.mediaDevices.getDisplayMedia(constraints)
         .then(getUserMediaSuccess)
         .catch(getUserMediaError);
       }
