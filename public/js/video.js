@@ -58,15 +58,18 @@ let getUserMediaDevices;
     peerConnection.addStream(localVideo);
     console.log('create offer')
     peerConnection.createOffer()
-    .then(sdp => peerConnection.setLocalDescription(sdp))
+    .then(sdp => {
+      console.log('set offer')
+      return peerConnection.setLocalDescription(sdp)
+    })
     .then(function () {
-      console.log('emit offer')
+      console.log('send offer')
       socket.emit('offer', id, peerConnection.localDescription);
     });
     peerConnection.onaddstream = event => handleRemoteStreamAdded(event.stream, id);
     peerConnection.onicecandidate = function(event) {
       if (event.candidate) {
-        console.log('emit candidate')
+        console.log('send candidate')
         socket.emit('candidate', id, event.candidate);
       }
     };
@@ -77,10 +80,15 @@ let getUserMediaDevices;
     peerConnections[id] = peerConnection;
     peerConnection.addStream(localVideo);
     console.log('set remote')
-    console.log('create answer')
     peerConnection.setRemoteDescription(description)
-    .then(() => peerConnection.createAnswer())
-    .then(sdp => peerConnection.setLocalDescription(sdp))
+    .then(() => {
+      console.log('create answer')
+      return peerConnection.createAnswer()
+    })
+    .then(sdp => {
+      console.log('set answer')
+      return peerConnection.setLocalDescription(sdp)
+    })
     .then(function () {
       console.log('send answer')
       socket.emit('answer', id, peerConnection.localDescription);
@@ -88,7 +96,7 @@ let getUserMediaDevices;
     peerConnection.onaddstream = event => handleRemoteStreamAdded(event.stream, id);
     peerConnection.onicecandidate = function(event) {
       if (event.candidate) {
-        console.log('emit candidate')
+        console.log('send candidate')
         socket.emit('candidate', id, event.candidate);
       }
     };
