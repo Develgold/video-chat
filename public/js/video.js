@@ -1,12 +1,12 @@
 let getUserMediaDevices;
 
-(function() {
+(function () {
   /** @type {SocketIOClient.Socket} */
   const socket = io.connect(window.location.origin);
   let localVideo = null;
   const remoteVideos = document.querySelector('.remoteVideos');
   const peerConnections = {};
-  
+
   let room = !location.pathname.substring(1) ? 'home' : location.pathname.substring(1);
   let getUserMediaAttempts = 5;
   let gettingUserMedia = false;
@@ -20,15 +20,15 @@ let getUserMediaDevices;
 
   /** @type {MediaStreamConstraints} */
   const constraints = {
-    audio: true,
+    audio: false,
     video: true
   };
 
-  socket.on('full', function(room) {
+  socket.on('full', function (room) {
     alert('Room ' + room + ' is full');
   });
 
-  socket.on('bye', function(id) {
+  socket.on('bye', function (id) {
     handleRemoteHangup(id);
   });
 
@@ -36,14 +36,14 @@ let getUserMediaDevices;
     socket.emit('join', room);
   }
 
-  window.onunload = window.onbeforeunload = function() {
+  window.onunload = window.onbeforeunload = function () {
     socket.close();
   };
 
   getUserMediaDevices = function () {
     if (!gettingUserMedia && !localVideo) {
-        gettingUserMedia = true;
-        navigator.mediaDevices.getDisplayMedia(constraints)
+      gettingUserMedia = true;
+      navigator.mediaDevices.getDisplayMedia(constraints)
         .then(getUserMediaSuccess)
         .catch(getUserMediaError);
     }
@@ -58,57 +58,58 @@ let getUserMediaDevices;
     peerConnection.addStream(localVideo);
     console.log('create offer')
     peerConnection.createOffer()
-    .then(sdp => {
-      console.log('set offer')
-      return peerConnection.setLocalDescription(sdp)
-    })
-    .then(function () {
-      console.log('send offer')
-      socket.emit('offer', id, peerConnection.localDescription);
-    });
+      .then(sdp => {
+        console.log('set offer')
+        return peerConnection.setLocalDescription(sdp)
+      })
+      .then(function () {
+        console.log('send offer')
+        socket.emit('offer', id, peerConnection.localDescription);
+      });
     peerConnection.onaddstream = event => handleRemoteStreamAdded(event.stream, id);
-    peerConnection.onicecandidate = function(event) {
+    peerConnection.onicecandidate = function (event) {
       if (event.candidate) {
         console.log('send candidate')
         socket.emit('candidate', id, event.candidate);
       }
     };
   });
-  
-  socket.on('offer', function(id, description) {
+
+  socket.on('offer', function (id, description) {
     const peerConnection = new RTCPeerConnection(config);
     peerConnections[id] = peerConnection;
     peerConnection.addStream(localVideo);
     console.log('set remote')
     peerConnection.setRemoteDescription(description)
-    .then(() => {
-      console.log('create answer')
-      return peerConnection.createAnswer()
-    })
-    .then(sdp => {
-      console.log('set answer')
-      return peerConnection.setLocalDescription(sdp)
-    })
-    .then(function () {
-      console.log('send answer')
-      socket.emit('answer', id, peerConnection.localDescription);
-    });
+      .then(() => {
+        console.log('create answer')
+        return peerConnection.createAnswer()
+      })
+      .then(sdp => {
+        console.log('set answer')
+        return peerConnection.setLocalDescription(sdp)
+      })
+      .then(function () {
+        console.log('send answer')
+        socket.emit('answer', id, peerConnection.localDescription);
+      });
     peerConnection.onaddstream = event => handleRemoteStreamAdded(event.stream, id);
-    peerConnection.onicecandidate = function(event) {
+    peerConnection.onicecandidate = function (event) {
+      console.log(event)
       if (event.candidate) {
         console.log('send candidate')
         socket.emit('candidate', id, event.candidate);
       }
     };
   });
-  
-  socket.on('candidate', function(id, candidate) {
+
+  socket.on('candidate', function (id, candidate) {
     console.log('add candidate')
     peerConnections[id].addIceCandidate(new RTCIceCandidate(candidate))
-    .catch(e => console.error(e));
+      .catch(e => console.error(e));
   });
-  
-  socket.on('answer', function(id, description) {
+
+  socket.on('answer', function (id, description) {
     console.log('set remote 2')
     peerConnections[id].setRemoteDescription(description);
   });
